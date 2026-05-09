@@ -16,7 +16,7 @@ const TABS = [
   { id: 'flows',     label: 'Flows',     icon: '🔀' },
   { id: 'payoff',    label: 'Payoff',    icon: '💰' },
   { id: 'comparison',label: 'Compare',   icon: '⚔️' },
-  { id: 'theory',    label: 'Theory',    icon: '📚' },
+  // { id: 'theory',    label: 'Theory',    icon: '📚' },
 ];
 
 export default function App() {
@@ -198,7 +198,7 @@ export default function App() {
             {tab === 'flows'      && <FlowsTab flows={flows} onUpdateFlows={handleUpdateFlows} running={running} />}
             {tab === 'payoff'     && <PayoffTab state={sharedState} alpha={alpha} beta={beta} onAlpha={setAlpha} onBeta={setBeta} />}
             {tab === 'comparison' && <ComparisonTab />}
-            {tab === 'theory'     && <TheoryTab />}
+            {/* {tab === 'theory'     && <TheoryTab />} */}
           </main>
         </div>
       </div>
