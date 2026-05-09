@@ -1,14 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
-<<<<<<< HEAD
 import TopologyBuilder from './components/TopologyBuilder';
-=======
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
 import Dashboard from './components/Dashboard';
 import FlowsTab from './components/FlowsTab';
 import PayoffTab from './components/PayoffTab';
 import ComparisonTab from './components/ComparisonTab';
-<<<<<<< HEAD
 import AnalyticsTab from './components/AnalyticsTab';
 import { simulationStep, initSimulation, DEFAULT_FLOWS } from './simulation/engine';
 
@@ -59,25 +55,6 @@ export default function App() {
   const [topology, setTopology] = useState(DEFAULT_TOPOLOGY);
 
   // ── Simulation state ──────────────────────────────────────
-=======
-import TheoryTab from './components/TheoryTab';
-import AnalyticsTab from './components/AnalyticsTab';
-import Sidebar from './components/Sidebar';
-import { simulationStep, initSimulation, DEFAULT_FLOWS, SCENARIOS } from './simulation/engine';
-
-const SPEED_MAP = { '0.5x': 2000, '1x': 1000, '2x': 500, '5x': 200, '10x': 100 };
-const TABS = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { id: 'analytics', label: 'Analytics', icon: '🧮' },
-  { id: 'flows',     label: 'Flows',     icon: '🔀' },
-  { id: 'payoff',    label: 'Payoff',    icon: '💰' },
-  { id: 'comparison',label: 'Compare',   icon: '⚔️' },
-  // { id: 'theory',    label: 'Theory',    icon: '📚' },
-];
-
-export default function App() {
-  const [tab, setTab] = useState('dashboard');
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
   const [round, setRound] = useState(0);
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState('1x');
@@ -85,7 +62,6 @@ export default function App() {
   const [beta, setBeta] = useState(2.0);
   const [equilibrium, setEquilibrium] = useState(false);
   const [equilibriumRound, setEquilibriumRound] = useState(null);
-<<<<<<< HEAD
 
   const [flows, setFlows] = useState(() => {
     const init = initSimulation(DEFAULT_TOPOLOGY.flows);
@@ -95,14 +71,6 @@ export default function App() {
     const init = initSimulation(DEFAULT_TOPOLOGY.flows);
     return init.payoffHistories;
   });
-=======
-  const [activeScenario, setActiveScenario] = useState('mixed');
-  const [insight, setInsight] = useState(null);
-  const [mode, setMode] = useState('arena'); // 'playground' | 'arena'
-
-  const [flows, setFlows] = useState(DEFAULT_FLOWS.map(f => ({ ...f, throughput: 0, delay: 0, lossRate: 0, payoff: 0 })));
-  const [payoffHistories, setPayoffHistories] = useState(DEFAULT_FLOWS.map(() => []));
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
   const [linkUtil, setLinkUtil] = useState({});
   const [linkLoss, setLinkLoss] = useState({});
   const [linkDemand, setLinkDemand] = useState({});
@@ -111,7 +79,6 @@ export default function App() {
   const [congestedNodes, setCongestedNodes] = useState(new Set());
   const [flowsWithPayoff, setFlowsWithPayoff] = useState([]);
   const [historyChart, setHistoryChart] = useState([]);
-<<<<<<< HEAD
 
   const timerRef = useRef(null);
   const stateRef = useRef({ flows, payoffHistories, alpha, beta, topology });
@@ -143,19 +110,6 @@ export default function App() {
     const { flows: curFlows, payoffHistories: curHistories, alpha: a, beta: b, topology: topo } = stateRef.current;
     const result = simulationStep(curFlows, curHistories, a, b, topo.links);
 
-=======
-  const [bottleneckUtil, setBottleneckUtil] = useState(0);
-
-  const timerRef = useRef(null);
-  const stateRef = useRef({ flows, payoffHistories, alpha, beta });
-  const equilibriumRef = useRef(false);
-
-  useEffect(() => { stateRef.current = { flows, payoffHistories, alpha, beta }; }, [flows, payoffHistories, alpha, beta]);
-
-  const doStep = useCallback(() => {
-    const { flows: cur, payoffHistories: hist, alpha: a, beta: b } = stateRef.current;
-    const result = simulationStep(cur, hist, a, b);
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
     setFlows(result.flows);
     setPayoffHistories(result.newHistories);
     setLinkUtil(result.linkUtil);
@@ -166,7 +120,6 @@ export default function App() {
     setEquilibrium(result.equilibrium);
     setCongestedNodes(result.congestedNodes);
     setFlowsWithPayoff(result.flowsWithPayoff);
-<<<<<<< HEAD
 
     setRound(r => {
       const newRound = r + 1;
@@ -188,28 +141,10 @@ export default function App() {
       });
       setHistoryChart(prev => [...prev, point]);
       return newRound;
-=======
-    setBottleneckUtil(result.bottleneckUtil);
-    setInsight(result.insight);
-    setRound(r => {
-      const nr = r + 1;
-      if (result.equilibrium && !equilibriumRef.current) { equilibriumRef.current = true; setEquilibriumRound(nr); }
-      const pt = { round: nr, throughput: +result.totalThroughput.toFixed(1), fairness: +result.fairness.toFixed(3) };
-      result.flowsWithPayoff.forEach(f => {
-        pt['rate_'+f.id]       = +(f.rate||0).toFixed(2);
-        pt['payoff_'+f.id]     = +(f.payoff||0).toFixed(2);
-        pt['delay_'+f.id]      = +(f.delay||0).toFixed(2);
-        pt['loss_'+f.id]       = +((f.lossRate||0)*100).toFixed(2);
-        pt['throughput_'+f.id] = +(f.throughput||0).toFixed(2);
-      });
-      setHistoryChart(prev => [...prev, pt]);
-      return nr;
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
     });
   }, []);
 
   useEffect(() => {
-<<<<<<< HEAD
     if (running) {
       const interval = SPEED_MAP[speed] || 1000;
       timerRef.current = setInterval(doStep, interval);
@@ -240,34 +175,10 @@ export default function App() {
   function handlePlayPause() { setRunning(r => !r); }
   function handleStep() { if (!running) doStep(); }
   function handleReset() { doReset(); }
-=======
-    if (running) timerRef.current = setInterval(doStep, SPEED_MAP[speed] || 1000);
-    return () => clearInterval(timerRef.current);
-  }, [running, speed, doStep]);
-
-  function handleScenario(key) {
-    setActiveScenario(key);
-    handleReset(SCENARIOS[key].flows);
-  }
-
-  function handleReset(customFlows) {
-    setRunning(false); clearInterval(timerRef.current);
-    equilibriumRef.current = false;
-    setRound(0); setEquilibrium(false); setEquilibriumRound(null);
-    setFairness(0); setTotalThroughput(0);
-    setLinkUtil({}); setLinkLoss({}); setLinkDemand({});
-    setCongestedNodes(new Set()); setFlowsWithPayoff([]);
-    setHistoryChart([]); setInsight(null); setBottleneckUtil(0);
-    const src = customFlows || flows.map(f => ({ id: f.id, path: f.path, strategy: f.strategy, rate: 40, color: f.color }));
-    const init = initSimulation(src);
-    setFlows(init.flows); setPayoffHistories(init.payoffHistories);
-  }
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
 
   function handleUpdateFlows(newFlows) {
     equilibriumRef.current = false;
     const init = initSimulation(newFlows);
-<<<<<<< HEAD
     setFlows(init.flows);
     setPayoffHistories(init.payoffHistories);
     setRound(0);
@@ -308,29 +219,11 @@ export default function App() {
   };
 
   const isSimTab = tab !== 'topology';
-=======
-    setFlows(init.flows); setPayoffHistories(init.payoffHistories);
-    setRound(0); setEquilibrium(false); setEquilibriumRound(null);
-    setFairness(0); setTotalThroughput(0);
-    setLinkUtil({}); setLinkLoss({});
-    setCongestedNodes(new Set()); setFlowsWithPayoff([]); setHistoryChart([]);
-  }
-
-  const sharedState = {
-    flows, linkUtil, linkLoss, linkDemand, fairness, totalThroughput,
-    equilibrium, congestedNodes, flowsWithPayoff,
-    historyChart: historyChart.slice(-40), bottleneckUtil, insight,
-  };
-
-  const scenarioInfo = SCENARIOS[activeScenario];
-  const isBottleneckCongested = bottleneckUtil > 0.8;
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
 
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="logo">GT<span>ACCS</span></div>
-<<<<<<< HEAD
         <div className="header-pill">Game-Theoretic Adaptive Congestion Control</div>
         {tab !== 'topology' && (
           <div className="header-pill" style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
@@ -349,22 +242,11 @@ export default function App() {
             <button key={t.id} className={`nav-tab ${tab === t.id ? 'active' : ''}`}
               onClick={() => setTab(t.id)}>
               {t.label}
-=======
-
-        <div className="header-spacer" />
-
-        <nav className="nav-tabs">
-          {TABS.map(t => (
-            <button key={t.id} className={'nav-tab' + (tab === t.id ? ' active' : '')} onClick={() => setTab(t.id)}>
-              <span className="tab-icon">{t.icon}</span>
-              <span className="tab-label">{t.label}</span>
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
             </button>
           ))}
         </nav>
       </header>
 
-<<<<<<< HEAD
       <main className="main-content">
 
         {/* Sim controls — only on non-topology tabs */}
@@ -386,31 +268,10 @@ export default function App() {
               {Object.keys(SPEED_MAP).map(s => (
                 <option key={s} value={s}>{s} Speed</option>
               ))}
-=======
-      <div className="app-container">
-        <Sidebar 
-          mode={mode} setMode={setMode} 
-          activeScenario={activeScenario} onSelectScenario={handleScenario} 
-        />
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div className="sim-controls">
-            <div className="sim-round">Round <span>{round}</span></div>
-
-            <button className="ctrl-btn primary" onClick={() => setRunning(r => !r)}>
-              {running ? '⏸ Pause' : '▶ Play'}
-            </button>
-            <button className="ctrl-btn ghost" onClick={doStep} disabled={running}>⏭ Step</button>
-            <button className="ctrl-btn danger" onClick={() => handleReset()}>↺ Reset</button>
-
-            <select className="speed-select" value={speed} onChange={e => setSpeed(e.target.value)}>
-              {Object.keys(SPEED_MAP).map(s => <option key={s} value={s}>{s} Speed</option>)}
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
             </select>
 
             <div className="ctrl-spacer" />
 
-<<<<<<< HEAD
             {/* Edit topology shortcut */}
             <button onClick={() => { setRunning(false); setTab('topology'); }} style={{
               fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
@@ -472,48 +333,6 @@ export default function App() {
 
         {tab === 'comparison' && <ComparisonTab />}
       </main>
-=======
-            <div className="bottleneck-meter">
-              <span className="bm-label">D→E</span>
-              <div className="bm-bar">
-                <div className="bm-fill" style={{ width: (bottleneckUtil * 100) + '%', background: isBottleneckCongested ? '#ef4444' : '#22c55e' }} />
-              </div>
-              <span className="bm-pct" style={{ color: isBottleneckCongested ? '#ef4444' : '#22c55e' }}>
-                {Math.round(bottleneckUtil * 100)}%
-              </span>
-            </div>
-
-            <div className={'eq-badge' + (equilibrium ? ' reached' : ' searching')}>
-              {equilibrium ? ('⚡ NASH EQ — R' + equilibriumRound) : '🔍 Searching...'}
-            </div>
-
-            {congestedNodes.size > 0 && (
-              <div className="congestion-pill">
-                🔴 {Array.from(congestedNodes).slice(0,4).join(', ')}
-              </div>
-            )}
-          </div>
-
-          {insight && (
-            <div className={'insight-bar insight-' + insight.type}>
-              <span className="insight-icon">
-                {insight.type === 'danger' ? '🚨' : insight.type === 'success' ? '✅' : insight.type === 'warning' ? '⚠️' : 'ℹ️'}
-              </span>
-              {insight.msg}
-            </div>
-          )}
-
-          <main className="main-content">
-            {tab === 'dashboard'  && <Dashboard state={sharedState} mode={mode} />}
-            {tab === 'analytics'  && <AnalyticsTab state={{ ...sharedState, historyChart }} alpha={alpha} beta={beta} equilibriumRound={equilibriumRound} round={round} flows={flows} />}
-            {tab === 'flows'      && <FlowsTab flows={flows} onUpdateFlows={handleUpdateFlows} running={running} />}
-            {tab === 'payoff'     && <PayoffTab state={sharedState} alpha={alpha} beta={beta} onAlpha={setAlpha} onBeta={setBeta} />}
-            {tab === 'comparison' && <ComparisonTab />}
-            {/* {tab === 'theory'     && <TheoryTab />} */}
-          </main>
-        </div>
-      </div>
->>>>>>> e0674159cb6301a6ada997f7388c5431dc22f598
     </div>
   );
 }
