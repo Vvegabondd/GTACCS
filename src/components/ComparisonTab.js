@@ -1,73 +1,192 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
-import { SCENARIOS } from '../simulation/engine';
-
-const SCENARIO_RESULTS = {
-  mixed: {
-    throughput: 52, loss: 18, fairness: 0.68, payoff: 8.2,
-    equilibrium: 'Partial', stability: 'Moderate',
-    insight: 'Mixed strategies create partial fairness. Aggressive flows consume bandwidth at the expense of conservative ones. MODELS real-world internet heterogeneity.',
-  },
-  low_traffic: {
-    throughput: 32, loss: 0, fairness: 0.99, payoff: 15.5,
-    equilibrium: 'Immediate', stability: 'Perfect',
-    insight: 'All flows within capacity. Zero packet loss and maximum stability. This represents the ideal state where supply exceeds demand.',
-  },
-  heavy_congestion: {
-    throughput: 42, loss: 68, fairness: 0.41, payoff: -24.5,
-    equilibrium: 'Never', stability: 'Chaotic',
-    insight: 'Tragedy of the Commons: all flows rationally maximize their rate, but collectively destroy the network. Payoffs plummet despite high sending rates.',
-  },
-  burst_traffic: {
-    throughput: 48, loss: 35, fairness: 0.55, payoff: -5.2,
-    equilibrium: 'Dynamic', stability: 'Low',
-    insight: 'High variance in flow rates causes frequent queue overflows. Buffers oscillate between empty and full, leading to inconsistent payoffs.',
-  },
-  fairness_critical: {
-    throughput: 68, loss: 5, fairness: 0.91, payoff: 22.1,
-    equilibrium: '~30 rounds', stability: 'Stable',
-    insight: 'Homogeneous adaptive strategies produce the best overall outcome. Flows self-organize into fair allocation without central coordination.',
-  },
-  adaptive_env: {
-    throughput: 62, loss: 12, fairness: 0.82, payoff: 14.8,
-    equilibrium: '~50 rounds', stability: 'Stable',
-    insight: 'Mixed adaptive and AIMD flows co-evolve. The system reaches a stable Nash Equilibrium slightly slower but maintains high efficiency.',
-  },
-};
-
-const RADAR_DATA = [
-  { axis: 'Throughput', heavy_congestion: 50, fairness_critical: 90, low_traffic: 25, mixed: 65 },
-  { axis: 'Fairness', heavy_congestion: 25, fairness_critical: 92, low_traffic: 98, mixed: 68 },
-  { axis: 'Stability', heavy_congestion: 5, fairness_critical: 88, low_traffic: 95, mixed: 55 },
-  { axis: 'Low Loss', heavy_congestion: 10, fairness_critical: 85, low_traffic: 99, mixed: 60 },
-  { axis: 'Payoff', heavy_congestion: 10, fairness_critical: 95, low_traffic: 50, mixed: 60 },
-];
+import { SCENARIOS, initSimulation, simulationStep, DEFAULT_FLOWS } from '../simulation/engine';
 
 const SCENARIO_COLORS = {
   heavy_congestion: '#ef4444',
   fairness_critical: '#3b82f6',
   low_traffic: '#22c55e',
   mixed: '#f59e0b',
+  adaptive_env: '#8b5cf6',
+  burst_traffic: '#06b6d4',
 };
 
 const SCENARIO_KEYS = Object.keys(SCENARIOS);
 
-export default function ComparisonTab() {
+function stddev(values) {
+  if (!values.length) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((a, b) => a + ((b - mean) * (b - mean)), 0) / values.length;
+  return Math.sqrt(variance);
+}
+
+function buildScenarioFlows(baseFlows, scenarioKey) {
+  const safeBase = (baseFlows && baseFlows.length ? baseFlows : DEFAULT_FLOWS).map(f => ({ ...f }));
+
+  switch (scenarioKey) {
+    case 'low_traffic':
+      return safeBase.map((f, i) => ({
+        ...f,
+        strategy: i % 2 === 0 ? 'conservative' : 'adaptive',
+        rate: Math.max(8, Math.round((f.rate || 25) * 0.45)),
+      }));
+    case 'heavy_congestion':
+      return safeBase.map(f => ({ ...f, strategy: 'aggressive', rate: Math.max(55, Math.round((f.rate || 40) * 1.55)) }));
+    case 'burst_traffic':
+      return safeBase.map((f, i) => ({
+        ...f,
+        strategy: i % 2 === 0 ? 'aggressive' : 'aimd',
+        rate: Math.max(35, Math.round((f.rate || 35) * (i % 2 === 0 ? 1.45 : 1.15))),
+      }));
+    case 'fairness_critical':
+      return safeBase.map(f => ({ ...f, strategy: 'adaptive', rate: Math.max(25, Math.round((f.rate || 30) * 0.9)) }));
+    case 'adaptive_env':
+      return safeBase.map((f, i) => ({ ...f, strategy: i % 2 === 0 ? 'adaptive' : 'aimd', rate: Math.max(28, Math.round((f.rate || 32) * 1.0)) }));
+    case 'mixed':
+    default: {
+      const cycle = ['aggressive', 'adaptive', 'conservative', 'aimd'];
+      return safeBase.map((f, i) => ({ ...f, strategy: cycle[i % cycle.length], rate: Math.max(30, Math.round(f.rate || 35)) }));
+    }
+  }
+}
+
+function summarizeStability(eqRound, tpSeries) {
+  if (eqRound != null) {
+    if (eqRound <= 20) return 'Perfect';
+    if (eqRound <= 40) return 'Stable';
+    return 'Moderate';
+  }
+  const recent = tpSeries.slice(-12);
+  const mean = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
+  const cv = Math.abs(mean) < 1e-6 ? 1 : (stddev(recent) / Math.abs(mean));
+  if (cv < 0.08) return 'Stable';
+  if (cv < 0.18) return 'Moderate';
+  if (cv < 0.32) return 'Low';
+  return 'Chaotic';
+}
+
+function buildInsight(result) {
+  if (result.loss > 40) return 'High offered load is causing sustained packet loss and payoff collapse. Consider less aggressive strategies or lower initial rates.';
+  if (result.fairness > 0.9 && result.loss < 10) return 'Flows are sharing bandwidth effectively with low loss and strong payoff, indicating healthy decentralized adaptation.';
+  if (result.equilibriumText.startsWith('Round')) return 'The system converged to a stable operating point; flows now have little incentive to deviate unilaterally.';
+  return 'The network remains adaptive with partial convergence; strategy mix and offered load still create trade-offs across fairness, loss, and payoff.';
+}
+
+export default function ComparisonTab({ baseFlows = DEFAULT_FLOWS, links = [], alpha = 0.3, beta = 2.0 }) {
   const [active, setActive] = useState('mixed');
 
-  const result = SCENARIO_RESULTS[active] || SCENARIO_RESULTS.mixed;
+  const simulationResults = useMemo(() => {
+    const rounds = 60;
+    const out = {};
+
+    SCENARIO_KEYS.forEach(key => {
+      const seededFlows = buildScenarioFlows(baseFlows, key);
+      let { flows, payoffHistories } = initSimulation(seededFlows);
+
+      let eqRound = null;
+      const tpSeries = [];
+      const fairnessSeries = [];
+      const lossSeries = [];
+      const payoffSeries = [];
+
+      for (let r = 1; r <= rounds; r += 1) {
+        const result = simulationStep(flows, payoffHistories, links, alpha, beta);
+        flows = result.flows;
+        payoffHistories = result.newHistories;
+
+        if (result.equilibrium && eqRound == null) eqRound = r;
+
+        tpSeries.push(result.totalThroughput || 0);
+        fairnessSeries.push(result.fairness || 0);
+        const avgLoss = (result.flowsWithPayoff || []).length
+          ? result.flowsWithPayoff.reduce((s, f) => s + (f.lossRate || 0), 0) / result.flowsWithPayoff.length
+          : 0;
+        const avgPayoff = (result.flowsWithPayoff || []).length
+          ? result.flowsWithPayoff.reduce((s, f) => s + (f.payoff || 0), 0) / result.flowsWithPayoff.length
+          : 0;
+        lossSeries.push(avgLoss * 100);
+        payoffSeries.push(avgPayoff);
+      }
+
+      const tail = 10;
+      const avg = arr => {
+        const recent = arr.slice(-tail);
+        return recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0;
+      };
+
+      const throughput = avg(tpSeries);
+      const fairness = avg(fairnessSeries);
+      const loss = avg(lossSeries);
+      const payoff = avg(payoffSeries);
+      const equilibriumText = eqRound == null ? 'Not reached' : `Round ${eqRound}`;
+      const stability = summarizeStability(eqRound, tpSeries);
+
+      out[key] = {
+        throughput,
+        fairness,
+        loss,
+        payoff,
+        eqRound,
+        equilibriumText,
+        stability,
+      };
+    });
+
+    return out;
+  }, [baseFlows, links, alpha, beta]);
+
+  const radarData = useMemo(() => {
+    const keys = SCENARIO_KEYS;
+    const maxThroughput = Math.max(...keys.map(k => simulationResults[k]?.throughput || 0), 1);
+    const minPayoff = Math.min(...keys.map(k => simulationResults[k]?.payoff || 0));
+    const maxPayoff = Math.max(...keys.map(k => simulationResults[k]?.payoff || 0));
+    const payoffRange = Math.max(1, maxPayoff - minPayoff);
+
+    const row = (axis, scoreFn) => {
+      const obj = { axis };
+      keys.forEach(k => {
+        obj[k] = Math.max(0, Math.min(100, scoreFn(simulationResults[k])));
+      });
+      return obj;
+    };
+
+    return [
+      row('Throughput', r => ((r?.throughput || 0) / maxThroughput) * 100),
+      row('Fairness', r => (r?.fairness || 0) * 100),
+      row('Stability', r => {
+        if (!r) return 0;
+        if (r.stability === 'Perfect') return 98;
+        if (r.stability === 'Stable') return 85;
+        if (r.stability === 'Moderate') return 65;
+        if (r.stability === 'Low') return 40;
+        return 15;
+      }),
+      row('Low Loss', r => 100 - (r?.loss || 0)),
+      row('Payoff', r => (((r?.payoff || 0) - minPayoff) / payoffRange) * 100),
+    ];
+  }, [simulationResults]);
+
+  const result = simulationResults[active] || simulationResults.mixed || {
+    throughput: 0,
+    fairness: 0,
+    loss: 0,
+    payoff: 0,
+    eqRound: null,
+    equilibriumText: 'Not reached',
+    stability: 'Low',
+  };
   const sc = SCENARIOS[active] || SCENARIOS.mixed;
 
   // Bar chart comparing all scenarios
   const barData = SCENARIO_KEYS.map(key => {
-    const r = SCENARIO_RESULTS[key] || SCENARIO_RESULTS.mixed;
+    const r = simulationResults[key] || result;
     return {
       name: SCENARIOS[key].name,
-      Throughput: r.throughput,
+      Throughput: Math.round(r.throughput),
       Fairness: Math.round(r.fairness * 100),
       LowLoss: Math.round(100 - r.loss),
     };
@@ -82,7 +201,7 @@ export default function ComparisonTab() {
 
       <div className="info-box">
         Compare how different strategy compositions affect network performance, fairness, and stability.
-        Each scenario runs the same 4-flow, 10-node network to isolate the effect of strategy choice.
+        These values are computed dynamically by simulating each scenario over your current topology and parameters.
       </div>
 
       {/* Scenario selector tabs */}
@@ -107,10 +226,10 @@ export default function ComparisonTab() {
             <div className="card-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                 {[
-                  { label: 'Avg Throughput', val: `${result.throughput} Mbps`, color: '#2563eb' },
+                  { label: 'Avg Throughput', val: `${result.throughput.toFixed(1)} Mbps`, color: '#2563eb' },
                   { label: 'Jain Fairness', val: result.fairness.toFixed(3), color: '#16a34a' },
-                  { label: 'Packet Loss', val: `${result.loss}%`, color: result.loss > 20 ? '#ef4444' : '#16a34a' },
-                  { label: 'Equilibrium', val: result.equilibrium, color: result.equilibrium === 'Never' ? '#ef4444' : '#3b82f6' },
+                  { label: 'Packet Loss', val: `${result.loss.toFixed(1)}%`, color: result.loss > 20 ? '#ef4444' : '#16a34a' },
+                  { label: 'Equilibrium', val: result.equilibriumText, color: result.eqRound == null ? '#ef4444' : '#3b82f6' },
                   { label: 'Stability', val: result.stability, color: '#f59e0b' },
                   { label: 'Avg Payoff', val: result.payoff.toFixed(1), color: result.payoff < 0 ? '#ef4444' : '#16a34a' },
                 ].map(({ label, val, color }) => (
@@ -129,7 +248,7 @@ export default function ComparisonTab() {
                 <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 12,
                   color: '#1d4ed8', marginBottom: 6 }}>💡 Analysis</div>
                 <div style={{ fontFamily: 'Space Grotesk', fontSize: 13, color: '#1e3a8a', lineHeight: 1.6 }}>
-                  {result.insight}
+                  {buildInsight(result)}
                 </div>
               </div>
             </div>
@@ -154,7 +273,7 @@ export default function ComparisonTab() {
                 </thead>
                 <tbody>
                   {SCENARIO_KEYS.map(key => {
-                    const r = SCENARIO_RESULTS[key];
+                    const r = simulationResults[key] || result;
                     const isActive = key === active;
                     return (
                       <tr key={key} onClick={() => setActive(key)} style={{
@@ -164,13 +283,13 @@ export default function ComparisonTab() {
                         <td style={{ fontWeight: isActive ? 700 : 400, color: isActive ? '#1d4ed8' : undefined }}>
                           {SCENARIOS[key].name}
                         </td>
-                        <td className="mono">{r.throughput} Mbps</td>
+                        <td className="mono">{r.throughput.toFixed(1)} Mbps</td>
                         <td className="mono">{r.fairness.toFixed(3)}</td>
-                        <td className="mono" style={{ color: r.loss > 20 ? '#ef4444' : '#16a34a' }}>{r.loss}%</td>
+                        <td className="mono" style={{ color: r.loss > 20 ? '#ef4444' : '#16a34a' }}>{r.loss.toFixed(1)}%</td>
                         <td>
                           <span style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600,
-                            color: r.equilibrium === 'Never' ? '#ef4444' : '#3b82f6' }}>
-                            {r.equilibrium}
+                            color: r.eqRound == null ? '#ef4444' : '#3b82f6' }}>
+                            {r.equilibriumText}
                           </span>
                         </td>
                       </tr>
@@ -191,19 +310,22 @@ export default function ComparisonTab() {
             </div>
             <div className="card-body">
               <ResponsiveContainer width="100%" height={260}>
-                <RadarChart data={RADAR_DATA}>
+                <RadarChart data={radarData}>
                   <PolarGrid stroke="#e2e8f0"/>
                   <PolarAngleAxis dataKey="axis"
                     tick={{ fontSize: 11, fontFamily: 'Space Grotesk', fill: '#4a5578' }}/>
                   <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false}/>
-                  <Radar name="All Aggressive" dataKey="allAggressive"
-                    stroke="#ef4444" fill="#ef4444" fillOpacity={0.12}/>
-                  <Radar name="All Adaptive" dataKey="allAdaptive"
-                    stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.12}/>
-                  <Radar name="All Conservative" dataKey="allConservative"
-                    stroke="#22c55e" fill="#22c55e" fillOpacity={0.12}/>
-                  <Radar name="Mixed (Default)" dataKey="default"
-                    stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.12}/>
+                  {SCENARIO_KEYS.map(key => (
+                    <Radar
+                      key={key}
+                      name={SCENARIOS[key].name}
+                      dataKey={key}
+                      stroke={SCENARIO_COLORS[key] || '#64748b'}
+                      fill={SCENARIO_COLORS[key] || '#64748b'}
+                      fillOpacity={active === key ? 0.24 : 0.1}
+                      strokeWidth={active === key ? 2.4 : 1.6}
+                    />
+                  ))}
                   <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'Space Grotesk' }}/>
                   <Tooltip contentStyle={{ fontFamily: 'Space Grotesk', fontSize: 12 }}/>
                 </RadarChart>

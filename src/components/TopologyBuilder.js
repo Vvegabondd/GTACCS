@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { STRATEGY_META } from '../simulation/engine';
 
 const FLOW_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899'];
 
@@ -19,31 +18,31 @@ function dist(a, b) {
 }
 
 const DEFAULT_NODES = [
-  { id: 'A', x: 80,  y: 190, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'B', x: 220, y: 100, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'C', x: 220, y: 290, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'D', x: 380, y: 190, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'E', x: 500, y: 190, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'F', x: 620, y: 190, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'G', x: 750, y: 100, bandwidth: 1000, delay: 0,  packetLoss: 0 },
-  { id: 'H', x: 750, y: 290, bandwidth: 1000, delay: 0,  packetLoss: 0 },
+  { id: 'A', x: 80, y: 190, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'B', x: 220, y: 100, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'C', x: 220, y: 290, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'D', x: 380, y: 190, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'E', x: 500, y: 190, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'F', x: 620, y: 190, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'G', x: 750, y: 100, bandwidth: 1000, delay: 0, packetLoss: 0 },
+  { id: 'H', x: 750, y: 290, bandwidth: 1000, delay: 0, packetLoss: 0 },
 ];
 
 const DEFAULT_LINKS = [
   { from: 'A', to: 'B', capacity: 100 },
-  { from: 'A', to: 'C', capacity: 80  },
-  { from: 'B', to: 'D', capacity: 60  },
-  { from: 'C', to: 'D', capacity: 70  },
-  { from: 'D', to: 'E', capacity: 50  },
+  { from: 'A', to: 'C', capacity: 80 },
+  { from: 'B', to: 'D', capacity: 60 },
+  { from: 'C', to: 'D', capacity: 70 },
+  { from: 'D', to: 'E', capacity: 50 },
   { from: 'E', to: 'F', capacity: 100 },
-  { from: 'F', to: 'G', capacity: 90  },
-  { from: 'F', to: 'H', capacity: 80  },
+  { from: 'F', to: 'G', capacity: 90 },
+  { from: 'F', to: 'H', capacity: 80 },
 ];
 
 const DEFAULT_FLOWS_INIT = [
-  { id: 'F1', path: ['A','B','D','E','F','G'], strategy: 'aggressive',   rate: 40, color: '#ef4444' },
-  { id: 'F2', path: ['A','C','D','E','F','H'], strategy: 'adaptive',     rate: 40, color: '#3b82f6' },
-  { id: 'F3', path: ['B','D','E','F'],         strategy: 'conservative', rate: 40, color: '#22c55e' },
+  { id: 'F1', path: ['A', 'B', 'D', 'E', 'F', 'G'], strategy: 'aggressive', rate: 40, color: '#ef4444' },
+  { id: 'F2', path: ['A', 'C', 'D', 'E', 'F', 'H'], strategy: 'adaptive', rate: 40, color: '#3b82f6' },
+  { id: 'F3', path: ['B', 'D', 'E', 'F'], strategy: 'conservative', rate: 40, color: '#22c55e' },
 ];
 
 /* ── Shared modal overlay styles ─────────────────────────────────── */
@@ -77,9 +76,10 @@ function FieldRow({ label, children }) {
 
 /* ── Strategy pill selector ───────────────────────────────────────── */
 const STRATEGIES = [
-  { id: 'aggressive',   label: 'Aggressive',   color: '#ef4444', desc: 'Maximum throughput, ignores congestion' },
-  { id: 'adaptive',     label: 'Adaptive',      color: '#3b82f6', desc: 'Dynamically adjusts to network state' },
-  { id: 'conservative', label: 'Conservative',  color: '#22c55e', desc: 'Low rate, avoids packet loss' },
+  { id: 'aggressive', label: 'Aggressive', color: '#ef4444', desc: 'Maximum throughput, ignores congestion' },
+  { id: 'adaptive', label: 'Adaptive', color: '#3b82f6', desc: 'Dynamically adjusts to network state' },
+  { id: 'conservative', label: 'Conservative', color: '#22c55e', desc: 'Low rate, avoids packet loss' },
+  { id: 'aimd', label: 'TCP AIMD', color: '#f59e0b', desc: 'Additive increase, multiplicative decrease' },
 ];
 
 function StrategySelector({ value, onChange }) {
@@ -117,35 +117,36 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
       bandwidth: 1000, delay: 0, packetLoss: 0, ...n,
     }))
   );
-  const [links, setLinks]   = useState(topology?.links || DEFAULT_LINKS);
-  const [flows, setFlows]   = useState(topology?.flows || DEFAULT_FLOWS_INIT);
+  const [links, setLinks] = useState(topology?.links || DEFAULT_LINKS);
+  const [flows, setFlows] = useState(topology?.flows || DEFAULT_FLOWS_INIT);
 
-  const [mode, setMode]       = useState('select');
+  const [mode, setMode] = useState('select');
   const [dragging, setDragging] = useState(null);
   const [linkStart, setLinkStart] = useState(null);
-  const [mousePos, setMousePos]   = useState(null);
-  const [selected, setSelected]   = useState(null);
+  const [mousePos, setMousePos] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   /* Add Node modal */
-  const [showNodeModal, setShowNodeModal]   = useState(false);
+  const [showNodeModal, setShowNodeModal] = useState(false);
   const [pendingNodePos, setPendingNodePos] = useState(null);
-  const [newNodeLabel, setNewNodeLabel]     = useState('');
-  const [newNodeBW, setNewNodeBW]           = useState('1000');
-  const [newNodeDelay, setNewNodeDelay]     = useState('0');
-  const [newNodeLoss, setNewNodeLoss]       = useState('0');
+  const [newNodeLabel, setNewNodeLabel] = useState('');
+  const [newNodeBW, setNewNodeBW] = useState('1000');
+  const [newNodeDelay, setNewNodeDelay] = useState('0');
+  const [newNodeLoss, setNewNodeLoss] = useState('0');
 
   /* Add Link modal */
-  const [showLinkModal, setShowLinkModal]     = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
   const [pendingCapacity, setPendingCapacity] = useState(null);
-  const [capacityVal, setCapacityVal]         = useState('100');
-  /* Manual link form (in side panel) */
-  const [manualFrom, setManualFrom]   = useState('');
-  const [manualTo, setManualTo]       = useState('');
-  const [manualCap, setManualCap]     = useState('100');
+  const [capacityVal, setCapacityVal] = useState('100');
+
+  /* Manual link form */
+  const [manualFrom, setManualFrom] = useState('');
+  const [manualTo, setManualTo] = useState('');
+  const [manualCap, setManualCap] = useState('100');
 
   /* Edit node modal */
-  const [editNodeId, setEditNodeId]     = useState(null);
-  const [editNodeBW, setEditNodeBW]     = useState('');
+  const [editNodeId, setEditNodeId] = useState(null);
+  const [editNodeBW, setEditNodeBW] = useState('');
   const [editNodeDelay, setEditNodeDelay] = useState('');
   const [editNodeLoss, setEditNodeLoss] = useState('');
 
@@ -154,26 +155,26 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
   const [editLinkCap, setEditLinkCap] = useState('');
 
   /* Flow builder */
-  const [draftFlow, setDraftFlow]       = useState(null);
-  const [draftPath, setDraftPath]       = useState([]);
-  const [editFlowIdx, setEditFlowIdx]   = useState(null);
+  const [draftFlow, setDraftFlow] = useState(null);
+  const [draftPath, setDraftPath] = useState([]);
+  const [editFlowIdx, setEditFlowIdx] = useState(null);
   const [flowStrategy, setFlowStrategy] = useState('adaptive');
-  const [flowRate, setFlowRate]         = useState('40');
-  const [flowPanel, setFlowPanel]       = useState(false);
+  const [flowRate, setFlowRate] = useState('40');
+  const [flowPanel, setFlowPanel] = useState(false);
 
   const svgRef = useRef(null);
 
   /* ── Sync to parent ─────────────────────────────────────────────── */
   useEffect(() => {
     onTopologyChange({ nodes, links, flows });
-  }, [nodes, links, flows]);
+  }, [nodes, links, flows, onTopologyChange]);
 
   /* ── SVG coord helper ───────────────────────────────────────────── */
   function svgCoords(e) {
     const rect = svgRef.current.getBoundingClientRect();
     return {
-      x: ((e.clientX - rect.left) / rect.width)  * CANVAS_W,
-      y: ((e.clientY - rect.top)  / rect.height) * CANVAS_H,
+      x: ((e.clientX - rect.left) / rect.width) * CANVAS_W,
+      y: ((e.clientY - rect.top) / rect.height) * CANVAS_H,
     };
   }
 
@@ -196,13 +197,27 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
     });
   }
 
+  /* ── Flow node click handler ────────────────────────────────────── */
+  const handleFlowNodeClick = useCallback((nodeId) => {
+    setDraftPath(prev => {
+      if (prev.length === 0) return [nodeId];
+      const last = prev[prev.length - 1];
+      if (last === nodeId || prev.includes(nodeId)) return prev;
+      const linked = links.some(l =>
+        (l.from === last && l.to === nodeId) ||
+        (l.from === nodeId && l.to === last)
+      );
+      if (!linked) return prev;
+      return [...prev, nodeId];
+    });
+  }, [links]);
+
   /* ── Pointer handlers ───────────────────────────────────────────── */
   const handleMouseDown = useCallback((e) => {
     if (e.button !== 0) return;
     const { x, y } = svgCoords(e);
     const hit = nodeAt(x, y);
 
-    /* Flow-building mode: node clicks build path */
     if (draftFlow) {
       if (hit) handleFlowNodeClick(hit.id);
       return;
@@ -224,7 +239,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
         } else if (hit.id !== linkStart) {
           const exists = links.some(l =>
             (l.from === linkStart && l.to === hit.id) ||
-            (l.from === hit.id   && l.to === linkStart)
+            (l.from === hit.id && l.to === linkStart)
           );
           if (!exists) {
             setPendingCapacity({ from: linkStart, to: hit.id });
@@ -263,8 +278,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
         }
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, nodes, links, linkStart, draftFlow, draftPath]);
+  }, [mode, nodes, links, linkStart, draftFlow, handleFlowNodeClick]); // eslint-disable-line
 
   const handleMouseMove = useCallback((e) => {
     const { x, y } = svgCoords(e);
@@ -275,7 +289,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
         n.id === dragging.nodeId ? { ...n, ...snapped } : n
       ));
     }
-  }, [dragging]);
+  }, [dragging]); // eslint-disable-line
 
   const handleMouseUp = useCallback(() => setDragging(null), []);
 
@@ -295,8 +309,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
       setEditLinkIdx(li);
       setEditLinkCap(String(links[li].capacity));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, links]);
+  }, [nodes, links]); // eslint-disable-line
 
   /* ── Add Node confirm ───────────────────────────────────────────── */
   function confirmAddNode() {
@@ -306,8 +319,8 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
     setNodes(prev => [...prev, {
       id: label,
       ...pendingNodePos,
-      bandwidth:  parseInt(newNodeBW,    10) || 1000,
-      delay:      parseInt(newNodeDelay, 10) || 0,
+      bandwidth: parseInt(newNodeBW, 10) || 1000,
+      delay: parseInt(newNodeDelay, 10) || 0,
       packetLoss: parseFloat(newNodeLoss) || 0,
     }]);
     setShowNodeModal(false);
@@ -315,7 +328,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
     setNewNodeLabel('');
   }
 
-  /* ── Add Link confirm (from canvas click) ───────────────────────── */
+  /* ── Add Link confirm (canvas click) ────────────────────────────── */
   function confirmAddLink() {
     const cap = parseInt(capacityVal, 10);
     if (!cap || cap < 1) { alert('Enter a valid capacity (≥ 1).'); return; }
@@ -324,19 +337,19 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
     setPendingCapacity(null);
   }
 
-  /* ── Manual Add Link (from side panel form) ─────────────────────── */
+  /* ── Manual Add Link (side panel) ───────────────────────────────── */
   function confirmManualAddLink() {
     const from = manualFrom.trim().toUpperCase();
-    const to   = manualTo.trim().toUpperCase();
-    const cap  = parseInt(manualCap, 10);
+    const to = manualTo.trim().toUpperCase();
+    const cap = parseInt(manualCap, 10);
     if (!from || !to) { alert('Enter both From and To node IDs.'); return; }
-    if (from === to)  { alert('From and To must be different nodes.'); return; }
+    if (from === to) { alert('From and To must be different nodes.'); return; }
     if (!nodes.find(n => n.id === from)) { alert(`Node "${from}" does not exist.`); return; }
-    if (!nodes.find(n => n.id === to))   { alert(`Node "${to}" does not exist.`);   return; }
+    if (!nodes.find(n => n.id === to)) { alert(`Node "${to}" does not exist.`); return; }
     if (!cap || cap < 1) { alert('Enter a valid capacity (≥ 1).'); return; }
     const exists = links.some(l =>
       (l.from === from && l.to === to) ||
-      (l.from === to   && l.to === from)
+      (l.from === to && l.to === from)
     );
     if (exists) { alert('A link between these nodes already exists.'); return; }
     setLinks(prev => [...prev, { from, to, capacity: cap }]);
@@ -347,10 +360,12 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
   function confirmEditNode() {
     setNodes(prev => prev.map(n =>
       n.id === editNodeId
-        ? { ...n,
-            bandwidth:  parseInt(editNodeBW,    10) || 1000,
-            delay:      parseInt(editNodeDelay, 10) || 0,
-            packetLoss: parseFloat(editNodeLoss) || 0 }
+        ? {
+          ...n,
+          bandwidth: parseInt(editNodeBW, 10) || 1000,
+          delay: parseInt(editNodeDelay, 10) || 0,
+          packetLoss: parseFloat(editNodeLoss) || 0
+        }
         : n
     ));
     setEditNodeId(null);
@@ -382,24 +397,9 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
     setEditFlowIdx(null);
   }
 
-  function handleFlowNodeClick(nodeId) {
-    if (!draftFlow) return;
-    setDraftPath(prev => {
-      if (prev.length === 0) return [nodeId];
-      const last = prev[prev.length - 1];
-      if (last === nodeId || prev.includes(nodeId)) return prev;
-      const linked = links.some(l =>
-        (l.from === last && l.to === nodeId) ||
-        (l.from === nodeId && l.to === last)
-      );
-      if (!linked) return prev;
-      return [...prev, nodeId];
-    });
-  }
-
   function confirmFlow() {
     if (draftPath.length < 2) { alert('Select at least 2 connected nodes for the flow.'); return; }
-    const id    = editFlowIdx != null ? flows[editFlowIdx].id    : `F${flows.length + 1}`;
+    const id = editFlowIdx != null ? flows[editFlowIdx].id : `F${flows.length + 1}`;
     const color = editFlowIdx != null ? flows[editFlowIdx].color : FLOW_COLORS[flows.length % FLOW_COLORS.length];
     const newFlow = {
       id, path: draftPath, strategy: flowStrategy,
@@ -430,8 +430,14 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
   }
 
   function resetToDefault() {
-    setNodes(DEFAULT_NODES); setLinks(DEFAULT_LINKS); setFlows(DEFAULT_FLOWS_INIT);
-    setSelected(null); setMode('select'); setDraftFlow(null); setDraftPath([]); setFlowPanel(false);
+    setNodes(DEFAULT_NODES);
+    setLinks(DEFAULT_LINKS);
+    setFlows(DEFAULT_FLOWS_INIT);
+    setSelected(null);
+    setMode('select');
+    setDraftFlow(null);
+    setDraftPath([]);
+    setFlowPanel(false);
     setLinkStart(null);
   }
 
@@ -440,9 +446,9 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
     flows.every(f => f.path.length >= 2);
 
   const cursorStyle = mode === 'addNode' ? 'crosshair' :
-                      mode === 'addLink' ? 'cell' :
-                      mode === 'delete'  ? 'not-allowed' :
-                      dragging           ? 'grabbing' : 'default';
+    mode === 'addLink' ? 'cell' :
+      mode === 'delete' ? 'not-allowed' :
+        dragging ? 'grabbing' : 'default';
 
   const btnBase = {
     fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600,
@@ -466,18 +472,18 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
           Mode:
         </span>
         {[
-          { id: 'select',  icon: '↖', label: 'Select / Drag' },
+          { id: 'select', icon: '↖', label: 'Select / Drag' },
           { id: 'addNode', icon: '⊕', label: 'Add Node' },
           { id: 'addLink', icon: '⟷', label: 'Add Link' },
-          { id: 'delete',  icon: '✕', label: 'Delete' },
+          { id: 'delete', icon: '✕', label: 'Delete' },
         ].map(m => (
           <button key={m.id}
             onClick={() => { setMode(m.id); setLinkStart(null); setDraftFlow(null); setDraftPath([]); }}
             style={{
               ...btnBase,
               borderColor: mode === m.id ? 'var(--accent)' : 'var(--border)',
-              background:  mode === m.id ? 'var(--accent-light)' : '#fff',
-              color:       mode === m.id ? 'var(--accent)' : 'var(--text2)',
+              background: mode === m.id ? 'var(--accent-light)' : '#fff',
+              color: mode === m.id ? 'var(--accent)' : 'var(--text2)',
             }}>
             {m.icon} {m.label}
           </button>
@@ -546,7 +552,6 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
               onMouseUp={handleMouseUp}
               onDoubleClick={handleDblClick}
             >
-              {/* Grid dots (subtle) */}
               <defs>
                 <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
                   <circle cx="0" cy="0" r="1" fill="#e2e8f0" />
@@ -601,8 +606,8 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
               {/* Nodes */}
               {nodes.map(n => {
                 const isSelected = selected?.type === 'node' && selected.id === n.id;
-                const inDraft    = draftPath.includes(n.id);
-                const isStart    = draftPath[0] === n.id;
+                const inDraft = draftPath.includes(n.id);
+                const isStart = draftPath[0] === n.id;
                 return (
                   <g key={n.id} transform={`translate(${n.x}, ${n.y})`}>
                     {isSelected && (
@@ -635,7 +640,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
             </svg>
           </div>
 
-          {/* ── Manual Link Form (below canvas) ─────────────────────── */}
+          {/* ── Manual Link Form ─────────────────────────────────────── */}
           <div style={{
             background: '#fff', border: '1.5px solid var(--border)', borderRadius: 10,
             padding: '12px 16px', boxShadow: 'var(--shadow-sm)',
@@ -721,13 +726,11 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
                   </div>
                 </>
               ) : (
-                /* Flow builder sub-panel */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#1e3a8a', fontFamily: 'var(--font-ui)' }}>
                     {editFlowIdx != null ? `✏ Edit Flow ${flows[editFlowIdx]?.id}` : '+ New Flow'}
                   </div>
 
-                  {/* Path display */}
                   <div>
                     <span style={labelStyle}>Path (click nodes on canvas)</span>
                     <div style={{
@@ -743,13 +746,11 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
                     </button>
                   </div>
 
-                  {/* Strategy */}
                   <div>
                     <span style={labelStyle}>Flow Strategy</span>
                     <StrategySelector value={flowStrategy} onChange={setFlowStrategy} />
                   </div>
 
-                  {/* Rate */}
                   <FieldRow label="Target Rate (Mbps)">
                     <input type="number" value={flowRate}
                       onChange={e => setFlowRate(e.target.value)}
@@ -763,8 +764,8 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
                       style={{
                         ...btnBase, flex: 1,
                         borderColor: draftPath.length >= 2 ? '#2563eb' : '#e2e8f0',
-                        background:  draftPath.length >= 2 ? '#2563eb' : '#f1f5f9',
-                        color:       draftPath.length >= 2 ? '#fff' : '#94a3b8',
+                        background: draftPath.length >= 2 ? '#2563eb' : '#f1f5f9',
+                        color: draftPath.length >= 2 ? '#fff' : '#94a3b8',
                       }}>
                       ✓ {editFlowIdx != null ? 'Save Flow' : 'Add Flow'}
                     </button>
@@ -782,7 +783,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="ctrl-btn primary" onClick={() => { setMode('addNode'); setDraftFlow(null); }}>⊕ Add Node</button>
                 <button className="ctrl-btn primary" onClick={() => { setMode('addLink'); setDraftFlow(null); setLinkStart(null); }}>⟷ Add Link</button>
-                <button className="ctrl-btn danger"  onClick={() => { setMode('delete');  setDraftFlow(null); }}>✕ Delete</button>
+                <button className="ctrl-btn danger" onClick={() => { setMode('delete'); setDraftFlow(null); }}>✕ Delete</button>
               </div>
               <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'var(--font-ui)', lineHeight: 1.5 }}>
                 • <b>Add Node</b>: switch to Add Node mode, then click canvas<br />
@@ -791,7 +792,6 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
                 • <b>Double-click</b> any node/link to edit its parameters
               </div>
 
-              {/* Node list for quick reference */}
               <div>
                 <span style={labelStyle}>Nodes ({nodes.length})</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 4 }}>
@@ -809,9 +809,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════
-          MODALS
-      ════════════════════════════════════════════════════════════════ */}
+      {/* ════ MODALS ════ */}
 
       {/* Add Node Modal */}
       {showNodeModal && (
@@ -832,35 +830,23 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
               </span>
             </FieldRow>
             <FieldRow label="Bandwidth (Mbps)">
-              <input type="number" value={newNodeBW}
-                onChange={e => setNewNodeBW(e.target.value)}
-                min="1" style={inputStyle} />
+              <input type="number" value={newNodeBW} onChange={e => setNewNodeBW(e.target.value)} min="1" style={inputStyle} />
             </FieldRow>
             <FieldRow label="Propagation Delay (ms)">
-              <input type="number" value={newNodeDelay}
-                onChange={e => setNewNodeDelay(e.target.value)}
-                min="0" style={inputStyle} />
+              <input type="number" value={newNodeDelay} onChange={e => setNewNodeDelay(e.target.value)} min="0" style={inputStyle} />
             </FieldRow>
             <FieldRow label="Packet Loss Rate (0–100%)">
-              <input type="number" value={newNodeLoss}
-                onChange={e => setNewNodeLoss(e.target.value)}
-                min="0" max="100" step="0.1" style={inputStyle} />
+              <input type="number" value={newNodeLoss} onChange={e => setNewNodeLoss(e.target.value)} min="0" max="100" step="0.1" style={inputStyle} />
             </FieldRow>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowNodeModal(false)}
-                style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>
-                Cancel
-              </button>
-              <button onClick={confirmAddNode}
-                style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>
-                Add Node
-              </button>
+              <button onClick={() => setShowNodeModal(false)} style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>Cancel</button>
+              <button onClick={confirmAddNode} style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>Add Node</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Link Modal (from canvas click) */}
+      {/* Add Link Modal */}
       {showLinkModal && pendingCapacity && (
         <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) setShowLinkModal(false); }}>
           <div style={modalStyle}>
@@ -874,14 +860,8 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
                 min="1" style={inputStyle} />
             </FieldRow>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setShowLinkModal(false); setPendingCapacity(null); }}
-                style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>
-                Cancel
-              </button>
-              <button onClick={confirmAddLink}
-                style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>
-                Add Link
-              </button>
+              <button onClick={() => { setShowLinkModal(false); setPendingCapacity(null); }} style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>Cancel</button>
+              <button onClick={confirmAddLink} style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>Add Link</button>
             </div>
           </div>
         </div>
@@ -895,29 +875,17 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
               ✏ Edit Node: {editNodeId}
             </h3>
             <FieldRow label="Bandwidth (Mbps)">
-              <input autoFocus type="number" value={editNodeBW}
-                onChange={e => setEditNodeBW(e.target.value)}
-                min="1" style={inputStyle} />
+              <input autoFocus type="number" value={editNodeBW} onChange={e => setEditNodeBW(e.target.value)} min="1" style={inputStyle} />
             </FieldRow>
             <FieldRow label="Propagation Delay (ms)">
-              <input type="number" value={editNodeDelay}
-                onChange={e => setEditNodeDelay(e.target.value)}
-                min="0" style={inputStyle} />
+              <input type="number" value={editNodeDelay} onChange={e => setEditNodeDelay(e.target.value)} min="0" style={inputStyle} />
             </FieldRow>
             <FieldRow label="Packet Loss Rate (0–100%)">
-              <input type="number" value={editNodeLoss}
-                onChange={e => setEditNodeLoss(e.target.value)}
-                min="0" max="100" step="0.1" style={inputStyle} />
+              <input type="number" value={editNodeLoss} onChange={e => setEditNodeLoss(e.target.value)} min="0" max="100" step="0.1" style={inputStyle} />
             </FieldRow>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => setEditNodeId(null)}
-                style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>
-                Cancel
-              </button>
-              <button onClick={confirmEditNode}
-                style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>
-                Save
-              </button>
+              <button onClick={() => setEditNodeId(null)} style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>Cancel</button>
+              <button onClick={confirmEditNode} style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>Save</button>
             </div>
           </div>
         </div>
@@ -937,14 +905,8 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
                 min="1" style={inputStyle} />
             </FieldRow>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => setEditLinkIdx(null)}
-                style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>
-                Cancel
-              </button>
-              <button onClick={saveEditLink}
-                style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>
-                Save
-              </button>
+              <button onClick={() => setEditLinkIdx(null)} style={{ ...btnBase, borderColor: '#e2e8f0', background: '#f8fafc', color: '#64748b' }}>Cancel</button>
+              <button onClick={saveEditLink} style={{ ...btnBase, borderColor: '#2563eb', background: '#2563eb', color: '#fff' }}>Save</button>
             </div>
           </div>
         </div>

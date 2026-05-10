@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { NODE_POSITIONS, LINKS, STRATEGY_META } from '../simulation/engine';
+import { NODE_POSITIONS } from '../simulation/engine';
 
 function linkColor(util) {
   if (util > 0.9) return '#ef4444';
@@ -13,9 +13,8 @@ function linkWidth(util) {
   return 2;
 }
 
-export default function NetworkTopology({ flows, linkUtil = {}, congestedNodes = new Set() }) {
+export default function NetworkTopology({ flows, linkUtil = {}, congestedNodes = new Set(), topology = null, links = null }) {
   const animRef = useRef([]);
-
   // Build flow color map for animating packets
   const flowColors = {};
   (flows || []).forEach(f => {
@@ -27,6 +26,40 @@ export default function NetworkTopology({ flows, linkUtil = {}, congestedNodes =
   });
 
   const W = 960, H = 260;
+
+  // Active links and node positions: prefer passed topology, fallback to engine constants
+  const activeLinks = Array.isArray(links) && links.length ? links : (topology?.links || []);
+
+  // If topology nodes are provided, compute a scaled/centered mapping into this SVG viewport
+  let positions = NODE_POSITIONS;
+  if (topology && Array.isArray(topology.nodes) && topology.nodes.length) {
+    const nodesArr = topology.nodes;
+    const xs = nodesArr.map(n => n.x);
+    const ys = nodesArr.map(n => n.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const margin = 36;
+    const availW = W - margin * 2;
+    const availH = H - margin * 2;
+    const rangeX = Math.max(1, maxX - minX);
+    const rangeY = Math.max(1, maxY - minY);
+    const scale = Math.min(availW / rangeX, availH / rangeY);
+
+    // Centering offsets when aspect ratios differ
+    const usedW = rangeX * scale;
+    const usedH = rangeY * scale;
+    const offsetX = margin + Math.max(0, (availW - usedW) / 2);
+    const offsetY = margin + Math.max(0, (availH - usedH) / 2);
+
+    positions = nodesArr.reduce((m, n) => {
+      const nx = offsetX + (n.x - minX) * scale;
+      const ny = offsetY + (n.y - minY) * scale;
+      return { ...m, [n.id]: { x: nx, y: ny } };
+    }, {});
+  }
 
   return (
     <svg
@@ -81,9 +114,9 @@ export default function NetworkTopology({ flows, linkUtil = {}, congestedNodes =
       ))}
 
       {/* Links */}
-      {LINKS.map((link, idx) => {
-        const from = NODE_POSITIONS[link.from];
-        const to   = NODE_POSITIONS[link.to];
+      {activeLinks.map((link, idx) => {
+        const from = positions[link.from];
+        const to   = positions[link.to];
         const key  = `${link.from}-${link.to}`;
         const util = linkUtil[key] || 0;
         const isBottleneck = key === 'D-E';
@@ -141,8 +174,8 @@ export default function NetworkTopology({ flows, linkUtil = {}, congestedNodes =
       {/* Animated packets along links */}
       {(flows || []).map(flow =>
         flow.path.slice(0, -1).map((node, i) => {
-          const from = NODE_POSITIONS[node];
-          const to   = NODE_POSITIONS[flow.path[i+1]];
+          const from = positions[node];
+          const to   = positions[flow.path[i+1]];
           if (!from || !to) return null;
           const key = `${node}-${flow.path[i+1]}`;
           return (
@@ -154,8 +187,8 @@ export default function NetworkTopology({ flows, linkUtil = {}, congestedNodes =
         })
       )}
 
-      {/* Nodes */}
-      {Object.entries(NODE_POSITIONS).map(([node, pos]) => {
+      {/* Nodes (use computed positions so custom topology maps correctly) */}
+      {Object.entries(positions).map(([node, pos]) => {
         const isCongested = congestedNodes.has(node);
         const isBottleneckNode = node === 'D' || node === 'E';
         const fill = isCongested ? '#fef2f2' : isBottleneckNode ? '#fff7ed' : '#eff6ff';

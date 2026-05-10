@@ -28,7 +28,10 @@ export default function FlowsTab({ flows, onUpdateFlows, running }) {
 
   function addFlow() {
     if (flows.length >= 6) return;
-    const id = `F${flows.length + 1}`;
+    const used = new Set(flows.map(f => f.id));
+    let nextNum = 1;
+    while (used.has(`F${nextNum}`)) nextNum += 1;
+    const id = `F${nextNum}`;
     const newFlow = {
       id,
       path: ['A', 'B', 'D', 'E', 'F'],
@@ -48,19 +51,47 @@ export default function FlowsTab({ flows, onUpdateFlows, running }) {
     onUpdateFlows(DEFAULT_FLOWS.map(f => ({ ...f, throughput: 0, delay: 0, lossRate: 0, payoff: 0 })));
   }
 
-  // Radar chart data
-  const radarData = flows.map(f => ({
-    name: f.id,
-    Rate: Math.min(f.rate / 5, 100),
-    Throughput: Math.min((f.throughput || 0) * 2, 100),
-    Payoff: Math.max(0, Math.min(f.payoff + 30, 100)),
-    Loss: Math.max(0, 100 - (f.lossRate || 0) * 100),
-    Fairness: 70,
+  const chartFlows = (flows || []).map((f, idx) => ({
+    ...f,
+    flowKey: f.id || `F${idx + 1}`,
+    chartLabel: `${f.id || `F${idx + 1}`}`,
   }));
 
+  const safeMax = (vals, fallback = 1) => {
+    const m = Math.max(...vals, fallback);
+    return m > 0 ? m : fallback;
+  };
+
+  // Radar chart data: axis rows, per-flow keys as series.
+  // This makes each flow appear as its own polygon across the same 5 dimensions.
+  const maxRate = safeMax(chartFlows.map(f => f.rate || 0), 10);
+  const maxThroughput = safeMax(chartFlows.map(f => f.throughput || 0), 10);
+  const payoffValues = chartFlows.map(f => f.payoff || 0);
+  const minPayoff = Math.min(...payoffValues, 0);
+  const maxPayoff = Math.max(...payoffValues, 1);
+  const payoffRange = Math.max(1, maxPayoff - minPayoff);
+
+  const radarData = ['Rate', 'Throughput', 'Payoff', 'Low Loss', 'Low Delay'].map(metric => {
+    const row = { metric };
+    chartFlows.forEach(f => {
+      const rateScore = ((f.rate || 0) / maxRate) * 100;
+      const tpScore = ((f.throughput || 0) / maxThroughput) * 100;
+      const payoffScore = (((f.payoff || 0) - minPayoff) / payoffRange) * 100;
+      const lowLossScore = Math.max(0, 100 - ((f.lossRate || 0) * 100));
+      const lowDelayScore = Math.max(0, 100 - Math.min(100, (f.delay || 0) * 2));
+
+      if (metric === 'Rate') row[f.flowKey] = Math.round(rateScore);
+      if (metric === 'Throughput') row[f.flowKey] = Math.round(tpScore);
+      if (metric === 'Payoff') row[f.flowKey] = Math.round(payoffScore);
+      if (metric === 'Low Loss') row[f.flowKey] = Math.round(lowLossScore);
+      if (metric === 'Low Delay') row[f.flowKey] = Math.round(lowDelayScore);
+    });
+    return row;
+  });
+
   // Bar chart — current rates
-  const barData = flows.map(f => ({
-    name: f.id,
+  const barData = chartFlows.map(f => ({
+    name: f.chartLabel,
     Rate: parseFloat((f.rate || 0).toFixed(1)),
     Throughput: parseFloat((f.throughput || 0).toFixed(1)),
   }));
@@ -236,15 +267,20 @@ export default function FlowsTab({ flows, onUpdateFlows, running }) {
             <ResponsiveContainer width="100%" height={200}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="#e2e8f0"/>
-                <PolarAngleAxis dataKey="name" tick={{ fontSize: 10, fontFamily: 'Space Grotesk' }}/>
+                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10, fontFamily: 'Space Grotesk' }}/>
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false}/>
                 <Tooltip contentStyle={{ fontFamily: 'Space Grotesk', fontSize: 12 }}/>
-                {flows.map(f => (
-                  <Radar key={f.id} name={f.id} dataKey={undefined} stroke={f.color} fill={f.color} fillOpacity={0}/>
+                {chartFlows.map(f => (
+                  <Radar
+                    key={f.flowKey}
+                    name={f.flowKey}
+                    dataKey={f.flowKey}
+                    stroke={f.color}
+                    fill={f.color}
+                    fillOpacity={0.08}
+                    strokeWidth={2}
+                  />
                 ))}
-                {/* Single radar per flow via separate charts would be more complex; show combined */}
-                <Radar name="Rate" dataKey="Rate" stroke="#2563eb" fill="#2563eb" fillOpacity={0.1}/>
-                <Radar name="Throughput" dataKey="Throughput" stroke="#16a34a" fill="#16a34a" fillOpacity={0.1}/>
               </RadarChart>
             </ResponsiveContainer>
           </div>

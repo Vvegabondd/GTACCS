@@ -107,8 +107,24 @@ export default function App() {
   }, [topology.flows]);
 
   const doStep = useCallback(() => {
-    const { flows: curFlows, payoffHistories: curHistories, alpha: a, beta: b, topology: topo } = stateRef.current;
-    const result = simulationStep(curFlows, curHistories, a, b, topo.links);
+    const {
+      flows: curFlows,
+      payoffHistories: curHistories,
+      alpha: a,
+      beta: b,
+      topology: topo,
+    } = stateRef.current;
+
+    // Safety fallback
+    const links = Array.isArray(topo?.links) ? topo.links : [];
+
+    const result = simulationStep(
+      curFlows,
+      curHistories,
+      links,
+      a,
+      b
+    );
 
     setFlows(result.flows);
     setPayoffHistories(result.newHistories);
@@ -117,7 +133,8 @@ export default function App() {
     setLinkDemand(result.linkDemand);
     setFairness(result.fairness);
     setTotalThroughput(result.totalThroughput);
-    setEquilibrium(result.equilibrium);
+    const isEquilibriumLatched = equilibriumRef.current || result.equilibrium;
+    setEquilibrium(isEquilibriumLatched);
     setCongestedNodes(result.congestedNodes);
     setFlowsWithPayoff(result.flowsWithPayoff);
 
@@ -195,9 +212,9 @@ export default function App() {
     setTopology(prev => ({ ...prev, flows: newFlows }));
   }
 
-  function handleTopologyChange(newTopology) {
+  const handleTopologyChange = useCallback((newTopology) => {
     setTopology(newTopology);
-  }
+  }, []);
 
   function handleGoToDashboard() {
     // Reinit with current topology flows and switch to dashboard
@@ -213,6 +230,8 @@ export default function App() {
     fairness,
     totalThroughput,
     equilibrium,
+    equilibriumRound,
+    round,
     congestedNodes,
     flowsWithPayoff,
     historyChart: historyChart.slice(-40),
@@ -308,8 +327,11 @@ export default function App() {
         )}
 
         {tab === 'dashboard' && (
-          <Dashboard state={sharedState} topology={topology} />
-        )}
+          <Dashboard
+            state={sharedState}
+            topology={topology}
+            links={topology.links}
+          />)}
 
         {tab === 'analytics' && (
           <AnalyticsTab
@@ -319,6 +341,7 @@ export default function App() {
             equilibriumRound={equilibriumRound}
             round={round}
             flows={flows}
+            links={topology.links}
           />
         )}
 
@@ -331,7 +354,14 @@ export default function App() {
             onAlpha={setAlpha} onBeta={setBeta} />
         )}
 
-        {tab === 'comparison' && <ComparisonTab />}
+        {tab === 'comparison' && (
+          <ComparisonTab
+            baseFlows={topology.flows}
+            links={topology.links}
+            alpha={alpha}
+            beta={beta}
+          />
+        )}
       </main>
     </div>
   );
