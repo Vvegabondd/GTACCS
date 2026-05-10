@@ -521,15 +521,15 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 16 }}>
+      <div className="topology-layout" style={{ display: 'flex', gap: 16 }}>
 
         {/* ── Canvas ─────────────────────────────────────────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{
+        <div className="topology-canvas-column" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="topology-canvas-shell" style={{
             background: '#fff', border: '1.5px solid var(--border)',
             borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow)',
           }}>
-            <div style={{
+            <div className="topology-canvas-header" style={{
               padding: '8px 14px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)',
               display: 'flex', alignItems: 'center', gap: 10,
               fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--text2)',
@@ -641,7 +641,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
           </div>
 
           {/* ── Manual Link Form ─────────────────────────────────────── */}
-          <div style={{
+          <div className="topology-manual-form" style={{
             background: '#fff', border: '1.5px solid var(--border)', borderRadius: 10,
             padding: '12px 16px', boxShadow: 'var(--shadow-sm)',
           }}>
@@ -676,7 +676,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
         </div>
 
         {/* ── Right column ────────────────────────────────────────────── */}
-        <div style={{ width: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="topology-side-column" style={{ width: 380, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* Flow panel */}
           <div className="card">
@@ -687,7 +687,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
             <div className="card-body">
               {!flowPanel ? (
                 <>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <div className="topology-toolbar" style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                     <button className="ctrl-btn primary" onClick={startBuildFlow}>+ New Flow</button>
                     <button className="ctrl-btn ghost" onClick={() => setFlows(DEFAULT_FLOWS_INIT)}>Reset</button>
                   </div>
@@ -780,7 +780,7 @@ export default function TopologyBuilder({ topology, onTopologyChange, onGoToDash
           <div className="card">
             <div className="card-header"><span>Topology Actions</span></div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="topology-toolbar" style={{ display: 'flex', gap: 8 }}>
                 <button className="ctrl-btn primary" onClick={() => { setMode('addNode'); setDraftFlow(null); }}>⊕ Add Node</button>
                 <button className="ctrl-btn primary" onClick={() => { setMode('addLink'); setDraftFlow(null); setLinkStart(null); }}>⟷ Add Link</button>
                 <button className="ctrl-btn danger" onClick={() => { setMode('delete'); setDraftFlow(null); }}>✕ Delete</button>

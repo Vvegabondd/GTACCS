@@ -90,6 +90,18 @@ input  { font-family: var(--f-ui); }
 }
 .logo span { color: #60a5fa; }
 
+.header-pill {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.16);
+  color: rgba(255,255,255,.82);
+  font-family: var(--f-ui);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .scenario-trigger {
   display: flex; align-items: center; gap: var(--sp-2);
   background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22);
@@ -223,6 +235,7 @@ input  { font-family: var(--f-ui); }
   flex: 1; padding: var(--sp-6) var(--sp-7);
   display: flex; flex-direction: column; gap: var(--sp-5);
   overflow-y: auto;
+  min-width: 0;
 }
 
 /* ── Cards ──────────────────────────────────────────────── */
@@ -448,6 +461,20 @@ input  { font-family: var(--f-ui); }
 .project-info { font-family: var(--f-mono); font-size: 10px; color: var(--text3); display: flex; flex-direction: column; gap: 2px; }
 .project-info span { font-family: var(--f-ui); font-size: 9px; opacity: .7; }
 
+/* ── Mobile-only layout helpers ────────────────────────── */
+.topology-layout { display: flex; gap: 16px; }
+.topology-canvas-column { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.topology-side-column { width: 380px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.topology-canvas-shell { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+.topology-canvas-header { padding: 8px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-family: var(--f-ui); font-size: 12px; color: var(--text2); }
+.topology-toolbar { display: flex; gap: 8px; }
+.topology-manual-form { background: #fff; border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 16px; box-shadow: var(--shadow-sm); }
+.mobile-stack-grid { display: grid; }
+.mobile-3col-grid { display: grid; }
+.mobile-inline-wrap { display: flex; }
+.mobile-flex-wrap { display: flex; }
+.mobile-card-header { display: flex; }
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .metrics-strip { grid-template-columns: repeat(2,1fr); }
@@ -458,10 +485,59 @@ input  { font-family: var(--f-ui); }
   .sidebar { display: none; }
 }
 @media (max-width: 780px) {
-  .app-header { padding: 0 var(--sp-4); gap: var(--sp-3); }
-  .main-content { padding: var(--sp-4); }
-  .sim-controls { padding: 0 var(--sp-4); gap: var(--sp-2); }
-  .metrics-strip { grid-template-columns: 1fr 1fr; }
+  .app-shell { height: 100dvh; }
+  .app-header {
+    height: auto; padding: 10px var(--sp-3); gap: 8px;
+    align-items: flex-start; flex-wrap: wrap;
+  }
+  .logo { font-size: 16px; letter-spacing: 1px; }
+  .header-pill { display: none; }
+  .nav-tabs {
+    order: 3; width: 100%; overflow-x: auto; justify-content: flex-start;
+    scrollbar-width: thin;
+  }
+  .nav-tab { flex: 0 0 auto; padding: 6px 10px; font-size: 11px; }
+  .main-content { padding: 12px; gap: 14px; }
+  .sim-controls {
+    height: auto; padding: 12px; gap: 8px; flex-wrap: wrap; align-items: stretch;
+  }
+  .sim-round { width: 100%; }
+  .sim-controls .ctrl-btn,
+  .sim-controls .speed-select,
+  .sim-controls .sim-topology-btn,
+  .sim-controls .eq-badge,
+  .sim-controls .congestion-pill {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    justify-content: center;
+  }
+  .sim-controls .speed-select { text-align: center; }
+  .ctrl-spacer { display: none; }
+  .metrics-strip { grid-template-columns: 1fr; gap: 10px; }
+  .grid-2, .grid-3, .grid-23, .grid-32 { grid-template-columns: 1fr; gap: 12px; }
+  .mobile-stack-grid, .mobile-3col-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+  .mobile-inline-wrap, .mobile-flex-wrap { flex-wrap: wrap !important; }
+  .mobile-card-header { flex-wrap: wrap; align-items: flex-start; }
+  .card-header { padding: 10px 12px; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+  .card-body { padding: 12px; }
+  .flow-table { font-size: 12px; }
+  .flow-table th, .flow-table td { padding: 8px 10px; }
+  .table-scroll, .table-scroll-bounded { -webkit-overflow-scrolling: touch; }
+  .scenario-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .scenario-tab { flex: 0 0 auto; }
+  .gauge-svg { width: 140px; height: 78px; }
+  .topology-layout { flex-direction: column !important; }
+  .topology-side-column { width: 100% !important; }
+  .topology-toolbar { flex-wrap: wrap; }
+  .topology-toolbar .ctrl-btn { flex: 1 1 calc(50% - 4px); }
+  .topology-canvas-header { flex-wrap: wrap; gap: 6px; }
+  .topology-canvas-header span:last-child { width: 100%; margin-left: 0 !important; }
+  .topology-manual-form > div:last-child { flex-direction: column; align-items: stretch; }
+  .topology-manual-form input { width: 100% !important; }
+  .topology-manual-form .ctrl-btn { width: 100%; }
+  .topology-canvas-shell svg { min-height: 260px; }
+  .section-title { margin-bottom: 8px; }
+  .info-box, .no-congestion, .congestion-alert { font-size: 11px; }
   .tab-label { display: none; }
   .bm-bar, .bm-label, .bm-pct { display: none; }
 }

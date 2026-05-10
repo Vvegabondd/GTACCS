@@ -224,7 +224,7 @@ export default function ComparisonTab({ baseFlows = DEFAULT_FLOWS, links = [], a
               <span className="card-title">{sc.name} — Results</span>
             </div>
             <div className="card-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div className="mobile-3col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                 {[
                   { label: 'Avg Throughput', val: `${result.throughput.toFixed(1)} Mbps`, color: '#2563eb' },
                   { label: 'Jain Fairness', val: result.fairness.toFixed(3), color: '#16a34a' },

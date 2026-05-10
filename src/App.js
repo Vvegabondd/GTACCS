@@ -243,9 +243,9 @@ export default function App() {
     <div className="app-shell">
       <header className="app-header">
         <div className="logo">GT<span>ACCS</span></div>
-        <div className="header-pill">Game-Theoretic Adaptive Congestion Control</div>
+        <div className="header-pill header-pill--title">Game-Theoretic Adaptive Congestion Control</div>
         {tab !== 'topology' && (
-          <div className="header-pill" style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+          <div className="header-pill header-pill--stats" style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
             {flows.map(f => (
               <span key={f.id} style={{
                 width: 8, height: 8, borderRadius: '50%',
@@ -292,7 +292,7 @@ export default function App() {
             <div className="ctrl-spacer" />
 
             {/* Edit topology shortcut */}
-            <button onClick={() => { setRunning(false); setTab('topology'); }} style={{
+            <button className="ctrl-btn ghost sim-topology-btn" onClick={() => { setRunning(false); setTab('topology'); }} style={{
               fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600,
               padding: '4px 12px', borderRadius: 100, cursor: 'pointer',
               border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text2)',
@@ -307,7 +307,7 @@ export default function App() {
             </div>
 
             {congestedNodes.size > 0 && (
-              <div style={{
+              <div className="congestion-pill" style={{
                 background: '#dc2626', color: '#fff', borderRadius: 100,
                 fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700,
                 padding: '5px 12px', letterSpacing: 0.5, animation: 'pulse 1s infinite',

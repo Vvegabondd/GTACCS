@@ -100,7 +100,7 @@ export default function FlowsTab({ flows, onUpdateFlows, running }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Header actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="mobile-flex-wrap" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <h2 style={{ fontFamily: 'Sora', fontSize: 18, fontWeight: 700, color: '#1a2340', flex: 1 }}>
           Flow Configuration — Players & Strategies
         </h2>
@@ -294,7 +294,7 @@ export default function FlowsTab({ flows, onUpdateFlows, running }) {
           <span className="card-title">Strategy Reference</span>
         </div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div className="mobile-stack-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {[
               { key: 'aggressive', rule: 'Rate × 1.20 each round (always)', analogy: 'Greedy user maximizing bandwidth regardless of network state.' },
               { key: 'conservative', rule: 'Rate × 1.05 (clear) / Rate × 0.70 (loss)', analogy: 'Polite user that backs off heavily on any signal of congestion.' },

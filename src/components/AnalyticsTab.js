@@ -238,7 +238,7 @@ export default function AnalyticsTab({ state, alpha, beta, equilibriumRound, rou
           <span className="card-title">Simulation Configuration — User Parameters</span>
         </div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+          <div className="mobile-stack-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
 
             {/* Network params */}
             <div>
@@ -372,7 +372,7 @@ export default function AnalyticsTab({ state, alpha, beta, equilibriumRound, rou
           </div>
         </div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div className="mobile-stack-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div>
               <div style={{
                 background: equilibrium ? '#f0fdf4' : '#f8faff',
@@ -455,7 +455,7 @@ export default function AnalyticsTab({ state, alpha, beta, equilibriumRound, rou
         <SectionHeader icon="🔀" title="Per-Flow Detailed Statistics"
           sub="Current round metrics plus historical min/avg/peak across all rounds" />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+        <div className="mobile-stack-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
           {activeFlows.map(f => {
             const live = flowsWithPayoff.find(fp => fp.id === f.id) || f;
             const hist = flowStats[f.id] || {};
@@ -494,7 +494,7 @@ export default function AnalyticsTab({ state, alpha, beta, equilibriumRound, rou
                 <div style={{ padding: '16px 20px' }}>
                   <div style={{ marginBottom: 14 }}>
                     <div className="section-title" style={{ marginBottom: 8 }}>Current Round — Round {round}</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    <div className="mobile-3col-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                       {[
                         { label: 'Sending Rate', val: `${(live.rate || 0).toFixed(1)}`, unit: 'Mbps', color: f.color },
                         { label: 'Throughput', val: `${(live.throughput || 0).toFixed(1)}`, unit: 'Mbps', color: '#16a34a' },
@@ -525,7 +525,7 @@ export default function AnalyticsTab({ state, alpha, beta, equilibriumRound, rou
                   {hasData && (
                     <div>
                       <div className="section-title" style={{ marginBottom: 8 }}>Historical Summary (All Rounds)</div>
-                      <div style={{
+                      <div className="mobile-3col-grid" style={{
                         display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr',
                         border: '1px solid #dde3f0', borderRadius: 8, overflow: 'hidden'
                       }}>
