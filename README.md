@@ -6,21 +6,6 @@
 
 ---
 
-## ✨ Core Features at a Glance
-
-| Feature | Description |
-|---------|-------------|
-| 🎯 **Nash Equilibrium Detection** | Auto-identifies when no flow can improve by unilateral deviation |
-| 🕸️ **Custom Topology Builder** | Drag-and-drop network design with configurable link capacities |
-| 🔀 **Multi-Flow Configuration** | Create up to 6 flows with distinct strategies & paths |
-| 📊 **Real-Time Dashboards** | Live metrics, topology visualization, congestion alerts |
-| 📈 **Dynamic Analytics** | Payoff tracking, convergence visualization, fairness metrics |
-| ⚔️ **Strategy Comparison** | 6 scenarios with live 5-axis radar & bar charts |
-| 🎬 **Playback Control** | Play/Pause/Step/Reset with 0.5x–10x speed |
-| 🔒 **Sticky Equilibrium** | Once reached, equilibrium persists until reset |
-
----
-
 ## 🚀 Quick Start
 
 ### Prerequisites
